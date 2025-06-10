@@ -1,9 +1,28 @@
+if (typeof ethers === "undefined") {
+  alert("Ethers.js is not loaded. Please check the script tag.");
+}
+
+
+
+const connectWalletBtn = document.getElementById("connectWallet");
+const walletAddressP = document.getElementById("walletAddress");
+const buyTicketBtn = document.getElementById("buyTicketBtn");
+const drawNumberBtn = document.getElementById("drawNumberBtn");
+const ticketNumberInput = document.getElementById("ticketNumber");
+
+const jackpotSpan = document.getElementById("jackpot");
+const roundSpan = document.getElementById("round");
+const timeUntilDrawSpan = document.getElementById("timeUntilDraw");
+const ticketsCountSpan = document.getElementById("ticketsCount");
+
 let provider;
 let signer;
 let contract;
+let userAddress;
 
-const contractAddress = "0x1d55b93d43ddf448b77bc2b3d555ee075cc7d0d9";
+const contractAddress = "0x3a851256bd4a603057A6275AD3c3e58fC5A6363C"; // แก้เป็นที่อยู่ contract ของคุณ
 const contractABI = [
+  [
 	{
 		"inputs": [],
 		"name": "autoDrawNumber",
@@ -484,91 +503,106 @@ const contractABI = [
 		"stateMutability": "view",
 		"type": "function"
 	}
-]; // แทนที่ด้วย ABI JSON ของคุณ
-
-// Elements
-const connectWalletBtn = document.getElementById("connectWallet");
-const walletAddressP = document.getElementById("walletAddress");
-const buyTicketBtn = document.getElementById("buyTicketBtn");
-const ticketNumberInput = document.getElementById("ticketNumber");
-const drawNumberBtn = document.getElementById("drawNumberBtn");
-
-const jackpotSpan = document.getElementById("jackpot");
-const roundSpan = document.getElementById("round");
-const timeUntilDrawSpan = document.getElementById("timeUntilDraw");
-const ticketsCountSpan = document.getElementById("ticketsCount");
-
-// เริ่มต้นปิดปุ่มซื้อและจับรางวัลก่อนเชื่อมต่อ
-buyTicketBtn.disabled = true;
-drawNumberBtn.disabled = true;
+]
+];
 
 async function connectWallet() {
-  if (window.ethereum) {
-    try {
-      await window.ethereum.request({ method: "eth_requestAccounts" });
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      signer = provider.getSigner();
-      const address = await signer.getAddress();
-      walletAddressP.textContent = "Connected: " + address;
-
-      contract = new ethers.Contract(contractAddress, contractABI, signer);
-
-      // เปิดปุ่มเมื่อเชื่อมต่อสำเร็จ
-      buyTicketBtn.disabled = false;
-      drawNumberBtn.disabled = false;
-
-      await updateLotteryInfo();
-    } catch (error) {
-      alert("User rejected connection");
-    }
-  } else {
-    alert("Please install MetaMask!");
-  }
-}
-
-async function buyTicket() {
-  const number = parseInt(ticketNumberInput.value);
-  if (isNaN(number) || number < 0 || number > 99) {
-    alert("Please enter a number between 0 and 99");
+  if (typeof window.ethereum === "undefined") {
+    walletAddressP.textContent = "MetaMask is not installed";
     return;
   }
 
   try {
-    const ticketPrice = await contract.ticketPrice();
-    const tx = await contract.buyTicket(number, { value: ticketPrice });
+    await window.ethereum.request({ method: "eth_requestAccounts" });
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    signer = provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    walletAddressP.textContent = `Connected: ${userAddress}`;
+    buyTicketBtn.disabled = false;
+    drawNumberBtn.disabled = false; // ถ้าต้องการจำกัดสิทธิ์ ให้เพิ่มเช็ค
+
+    contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+    updateUI();
+
+    // ฟัง event จาก contract เพื่ออัปเดตข้อมูลทันที
+    contract.on("TicketBought", (buyer, number) => {
+      console.log(`Ticket bought by ${buyer} for number ${number}`);
+      updateUI();
+    });
+    contract.on("NumberDrawn", (number) => {
+      console.log(`Number drawn: ${number}`);
+      updateUI();
+    });
+  } catch (err) {
+    console.error(err);
+    walletAddressP.textContent = "Wallet connection rejected";
+  }
+}
+
+async function updateUI() {
+  if (!contract) return;
+
+  try {
+    const jackpotWei = await contract.jackpot();
+    const jackpotEth = ethers.utils.formatEther(jackpotWei);
+
+    const round = await contract.round();
+    const timeUntilDraw = await contract.timeUntilDraw();
+    const ticketsCount = await contract.ticketsCount();
+
+    jackpotSpan.textContent = jackpotEth;
+    roundSpan.textContent = round.toString();
+    timeUntilDrawSpan.textContent = timeUntilDraw.toString();
+    ticketsCountSpan.textContent = ticketsCount.toString();
+  } catch (err) {
+    console.error("Error updating UI:", err);
+  }
+}
+
+async function buyTicket() {
+  if (!contract) return;
+  const ticketNum = parseInt(ticketNumberInput.value);
+
+  if (isNaN(ticketNum) || ticketNum < 0 || ticketNum > 99) {
+    alert("Please enter a valid ticket number between 0 and 99");
+    return;
+  }
+
+  try {
+    // สมมติว่าแต่ละบัตรราคา 0.01 ETH (แก้ตามจริง)
+    const price = ethers.utils.parseEther("0.01");
+
+    const tx = await contract.buyTicket(ticketNum, { value: price });
     await tx.wait();
-    alert("Ticket purchased!");
-    await updateLotteryInfo();
-  } catch (error) {
-    alert("Transaction failed or rejected");
-    console.error(error);
+
+    alert("Ticket bought successfully!");
+    ticketNumberInput.value = "";
+  } catch (err) {
+    console.error(err);
+    alert("Failed to buy ticket: " + (err.data?.message || err.message));
   }
 }
 
 async function drawNumber() {
+  if (!contract) return;
+
   try {
     const tx = await contract.drawNumber();
     await tx.wait();
+
     alert("Number drawn!");
-    await updateLotteryInfo();
-  } catch (error) {
-    alert("Draw failed or rejected");
-    console.error(error);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to draw number: " + (err.data?.message || err.message));
   }
 }
 
-async function updateLotteryInfo() {
-  try {
-    const info = await contract.getContractInfo();
-    jackpotSpan.textContent = ethers.utils.formatEther(info.currentJackpot);
-    roundSpan.textContent = info.currentRound.toString();
-    timeUntilDrawSpan.textContent = info.timeUntilDraw.toString();
-    ticketsCountSpan.textContent = info.ticketsInCurrentRound.toString();
-  } catch (error) {
-    console.error("Failed to fetch contract info:", error);
-  }
-}
+// Event listeners
+connectWalletBtn.addEventListener("click", connectWallet);
+buyTicketBtn.addEventListener("click", buyTicket);
+drawNumberBtn.addEventListener("click", drawNumber);
 
-connectWalletBtn.onclick = connectWallet;
-buyTicketBtn.onclick = buyTicket;
-drawNumberBtn.onclick = drawNumber;
+// อัปเดต UI ทุก 10 วินาที (ถ้าต้องการ)
+setInterval(updateUI, 10000);
