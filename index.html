@@ -1,18 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Lottery DApp</title>
-<link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.ethers.io/lib/ethers-5.6.umd.min.js" type="application/javascript"></script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lottery DApp</title>
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="application/javascript"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
+    .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 5px #ccc; }
+    button { margin-top: 10px; padding: 10px; width: 100%; font-size: 16px; }
+    input { padding: 10px; font-size: 16px; width: 100%; box-sizing: border-box; margin-top: 10px; }
+    .info div { margin-top: 10px; }
+  </style>
 </head>
 <body>
   <div class="container">
     <h2>Lottery DApp</h2>
     <button id="connectWallet">Connect Wallet</button>
     <p id="walletAddress">Wallet not connected</p>
+
     <input id="ticketNumber" type="number" min="0" max="99" placeholder="Enter ticket number (0-99)" />
     <button id="buyTicketBtn" disabled>Buy Ticket</button>
     <button id="drawNumberBtn" disabled>Draw Number</button>
@@ -25,7 +31,62 @@
     </div>
   </div>
 
-  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
-  <script src="app.js"></script>
+  <script>
+    // Wait until DOM is loaded
+    window.addEventListener('DOMContentLoaded', () => {
+      const connectWalletBtn = document.getElementById('connectWallet');
+      const walletAddressP = document.getElementById('walletAddress');
+      const buyTicketBtn = document.getElementById('buyTicketBtn');
+      const drawNumberBtn = document.getElementById('drawNumberBtn');
+      const ticketInput = document.getElementById('ticketNumber');
+
+      let provider;
+      let signer;
+      let userAddress;
+
+      // Check if MetaMask (or other Ethereum provider) is available
+      if (typeof window.ethereum === 'undefined') {
+        alert('MetaMask is not installed. Please install MetaMask to use this DApp.');
+        connectWalletBtn.disabled = true;
+        buyTicketBtn.disabled = true;
+        drawNumberBtn.disabled = true;
+        return;
+      }
+
+      connectWalletBtn.addEventListener('click', async () => {
+        try {
+          // Request account access
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          userAddress = await signer.getAddress();
+
+          walletAddressP.textContent = 'Wallet: ' + userAddress;
+          buyTicketBtn.disabled = false;
+          drawNumberBtn.disabled = false;
+          connectWalletBtn.disabled = true;
+
+          console.log('Connected wallet:', userAddress);
+        } catch (err) {
+          console.error('User rejected wallet connection:', err);
+        }
+      });
+
+      buyTicketBtn.addEventListener('click', () => {
+        const ticketNumber = parseInt(ticketInput.value);
+        if (isNaN(ticketNumber) || ticketNumber < 0 || ticketNumber > 99) {
+          alert('Please enter a valid ticket number between 0 and 99.');
+          return;
+        }
+        alert(`Buying ticket number ${ticketNumber} (This is a placeholder, add blockchain logic here)`);
+        // TODO: Add your smart contract interaction to buy a ticket here
+      });
+
+      drawNumberBtn.addEventListener('click', () => {
+        alert('Draw number (This is a placeholder, add blockchain logic here)');
+        // TODO: Add your smart contract interaction to draw a number here
+      });
+    });
+  </script>
 </body>
 </html>
