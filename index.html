@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lottery DApp</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>Lottery DApp</h2>
+    <button id="connectWallet">Connect Wallet</button>
+    <p id="walletAddress">Wallet not connected</p>
+    <input id="ticketNumber" type="number" min="0" max="99" placeholder="Enter ticket number (0-99)" />
+    <button id="buyTicketBtn" disabled>Buy Ticket</button>
+    <button id="drawNumberBtn" disabled>Draw Number</button>
+
+    <div class="info">
+      <div>Jackpot: <span id="jackpot">0</span> ETH</div>
+      <div>Round: <span id="round">0</span></div>
+      <div>Time Until Draw: <span id="timeUntilDraw">-</span> sec</div>
+      <div>Tickets Sold: <span id="ticketsCount">0</span></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+  <script src="app.js"></script>
+</body>
+</html>
