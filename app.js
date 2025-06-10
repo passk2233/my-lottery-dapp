@@ -20,7 +20,7 @@ let signer;
 let contract;
 let userAddress;
 
-const contractAddress = "0x3a851256bd4a603057A6275AD3c3e58fC5A6363C"; // แก้เป็นที่อยู่ contract ของคุณ
+const contractAddress = "0xaE036c65C649172b43ef7156b009c6221B596B8b"; // แก้เป็นที่อยู่ contract ของคุณ
 const contractABI = [
   [
 	{
